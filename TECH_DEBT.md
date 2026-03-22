@@ -34,6 +34,23 @@
 - [x] **Pagination not automatic** — Resolvido. Adicionado `_pagination_hint()` em tools.py que mostra "Use pagina=N+1" quando resultados >= DEFAULT_PAGE_SIZE e "Última página" quando < PAGE_SIZE em pagina > 1.
 - [x] **Pre-existing mypy errors in lifespan.py and ibge/client.py** — Resolvido. mypy passa limpo em todos os 35+ arquivos.
 
+## Câmara Feature
+
+- [x] **Envelope extraction** — API wraps all responses in `{"dados": [...], "links": [...]}`. Handled by `_get()` helper that auto-extracts `dados` field. Tested with empty/missing dados.
+- [ ] **No client-side rate limiting** — API does not document rate limits. No rate limiter applied yet; add if we hit 429s.
+- [ ] **Pagination is server-controlled** — API defaults to 15 items/page. `_pagination_hint()` suggests `pagina=N+1`, but some endpoints may have different defaults. No auto-pagination implemented.
+
+## Senado Feature
+
+- [x] **Deeply nested JSON responses** — API returns structures like `data.ListaParlamentarEmExercicio.Parlamentares.Parlamentar`. Handled by `_deep_get(*keys)` helper with safe navigation.
+- [x] **Single result as dict instead of list** — When only 1 result, API returns `{}` instead of `[{}]`. Handled by `_ensure_list()` coercion in all parsers.
+- [x] **JSON via Accept header** — API requires `Accept: application/json` header. `JSON_HEADERS` constant passed through all requests.
+- [ ] **No client-side rate limiting** — API does not document rate limits. No rate limiter applied yet.
+- [ ] **No pagination support** — Senado API does not use standard pagination. `_pagination_hint()` suggests refining filters when results are large.
+- [ ] **Votação nominal endpoint may vary** — `votos_materia` uses a different URL pattern than other matéria endpoints. Needs real API validation.
+- [ ] **E-Cidadania tools not implemented** — Plan includes 9 web-scraping tools for e-Cidadania. Deferred to future sessions.
+- [ ] **dados_abertos auxiliary tools not implemented** — Plan includes 4 additional tools. Deferred to future sessions.
+
 ## Known Limitations
 
 - [x] **No CONTRIBUTING.md** — Resolvido. CONTRIBUTING.md criado com getting started, estrutura, como adicionar features, convenções, testes e PR guidelines.

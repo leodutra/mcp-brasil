@@ -34,11 +34,32 @@ class TestRootServerTools:
             assert "bacen_buscar_serie" in names
 
     @pytest.mark.asyncio
+    async def test_camara_tools_namespaced(self) -> None:
+        async with Client(mcp) as c:
+            tools = await c.list_tools()
+            names = {t.name for t in tools}
+            assert "camara_listar_deputados" in names
+            assert "camara_buscar_proposicao" in names
+            assert "camara_votos_nominais" in names
+
+    @pytest.mark.asyncio
+    async def test_senado_tools_namespaced(self) -> None:
+        async with Client(mcp) as c:
+            tools = await c.list_tools()
+            names = {t.name for t in tools}
+            assert "senado_listar_senadores" in names
+            assert "senado_buscar_materia" in names
+            assert "senado_listar_comissoes" in names
+            assert "senado_agenda_plenario" in names
+
+    @pytest.mark.asyncio
     async def test_listar_features_returns_summary(self) -> None:
         async with Client(mcp) as c:
             result = await c.call_tool("listar_features", {})
             assert "ibge" in result.data
             assert "bacen" in result.data
+            assert "camara" in result.data
+            assert "senado" in result.data
 
 
 class TestRootServerResources:
@@ -60,6 +81,24 @@ class TestRootServerResources:
             assert "data://bacen/categorias" in uris
             assert "data://bacen/indicadores-chave" in uris
 
+    @pytest.mark.asyncio
+    async def test_camara_resources_namespaced(self) -> None:
+        async with Client(mcp) as c:
+            resources = await c.list_resources()
+            uris = {str(r.uri) for r in resources}
+            assert "data://camara/tipos-proposicao" in uris
+            assert "data://camara/legislaturas" in uris
+            assert "data://camara/info-api" in uris
+
+    @pytest.mark.asyncio
+    async def test_senado_resources_namespaced(self) -> None:
+        async with Client(mcp) as c:
+            resources = await c.list_resources()
+            uris = {str(r.uri) for r in resources}
+            assert "data://senado/tipos-materia" in uris
+            assert "data://senado/info-api" in uris
+            assert "data://senado/comissoes-permanentes" in uris
+
 
 class TestRootServerPrompts:
     @pytest.mark.asyncio
@@ -77,3 +116,21 @@ class TestRootServerPrompts:
             names = {p.name for p in prompts}
             assert "bacen_analise_economica" in names
             assert "bacen_comparar_indicadores" in names
+
+    @pytest.mark.asyncio
+    async def test_camara_prompts_namespaced(self) -> None:
+        async with Client(mcp) as c:
+            prompts = await c.list_prompts()
+            names = {p.name for p in prompts}
+            assert "camara_acompanhar_proposicao" in names
+            assert "camara_perfil_deputado" in names
+            assert "camara_analise_votacao" in names
+
+    @pytest.mark.asyncio
+    async def test_senado_prompts_namespaced(self) -> None:
+        async with Client(mcp) as c:
+            prompts = await c.list_prompts()
+            names = {p.name for p in prompts}
+            assert "senado_acompanhar_materia" in names
+            assert "senado_perfil_senador" in names
+            assert "senado_analise_votacao_senado" in names
