@@ -1,5 +1,6 @@
 """Tests for the transparencia HTTP client."""
 
+import logging
 from unittest.mock import patch
 
 import httpx
@@ -400,3 +401,142 @@ class TestConsultarViagens:
         assert result[0].nome == "Pedro Almeida"
         assert result[0].valor_diarias == 2000.0
         assert result[0].destino == "Brasília/DF"
+
+
+# ---------------------------------------------------------------------------
+# Edge cases: _safe_parse_list + non-list responses + warning logging
+# ---------------------------------------------------------------------------
+
+
+class TestSafeParseListLogging:
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_non_list_despesas_logs_warning(self, caplog: pytest.LogCaptureFixture) -> None:
+        respx.get(DESPESAS_URL).mock(return_value=httpx.Response(200, json={"error": "invalid"}))
+        with caplog.at_level(logging.WARNING, logger="mcp_brasil.transparencia.client"):
+            result = await client.consultar_despesas("01/2024", "06/2024")
+        assert result == []
+        assert "Resposta inesperada" in caplog.text
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_non_list_servidores_logs_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        respx.get(SERVIDORES_URL).mock(return_value=httpx.Response(200, json="plain string"))
+        with caplog.at_level(logging.WARNING, logger="mcp_brasil.transparencia.client"):
+            result = await client.buscar_servidores(nome="Test")
+        assert result == []
+        assert "Resposta inesperada" in caplog.text
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_non_list_licitacoes(self) -> None:
+        respx.get(LICITACOES_URL).mock(return_value=httpx.Response(200, json={"status": "error"}))
+        result = await client.buscar_licitacoes()
+        assert result == []
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_non_list_bolsa_municipio(self) -> None:
+        respx.get(BOLSA_FAMILIA_MUNICIPIO_URL).mock(
+            return_value=httpx.Response(200, json={"error": "not found"})
+        )
+        result = await client.consultar_bolsa_familia_municipio("202401", "3550308")
+        assert result == []
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_non_list_bolsa_nis(self) -> None:
+        respx.get(BOLSA_FAMILIA_NIS_URL).mock(return_value=httpx.Response(200, json=42))
+        result = await client.consultar_bolsa_familia_nis("202401", "12345678901")
+        assert result == []
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_non_list_emendas(self) -> None:
+        respx.get(EMENDAS_URL).mock(return_value=httpx.Response(200, json={"msg": "err"}))
+        result = await client.buscar_emendas(ano=2024)
+        assert result == []
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_non_list_viagens(self) -> None:
+        respx.get(VIAGENS_URL).mock(return_value=httpx.Response(200, json="oops"))
+        result = await client.consultar_viagens("12345678900")
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# Edge cases: parser null/empty fields
+# ---------------------------------------------------------------------------
+
+
+class TestParserEdgeCases:
+    def test_contrato_all_none(self) -> None:
+        result = client._parse_contrato({})
+        assert result.numero is None
+        assert result.orgao is None
+        assert result.fornecedor is None
+
+    def test_contrato_nested_empty(self) -> None:
+        result = client._parse_contrato({"fornecedor": {}, "unidadeGestora": {}})
+        assert result.fornecedor is None
+        assert result.orgao is None
+
+    def test_recurso_all_none(self) -> None:
+        result = client._parse_recurso({})
+        assert result.ano is None
+        assert result.valor is None
+
+    def test_servidor_all_none(self) -> None:
+        result = client._parse_servidor({})
+        assert result.nome is None
+        assert result.orgao is None
+
+    def test_licitacao_all_none(self) -> None:
+        result = client._parse_licitacao({})
+        assert result.numero is None
+        assert result.orgao is None
+
+    def test_bolsa_municipio_string_municipio(self) -> None:
+        """When API returns municipio as a string instead of dict."""
+        result = client._parse_bolsa_municipio({"municipio": "São Paulo"})
+        assert result.municipio == "São Paulo"
+        assert result.uf is None
+
+    def test_bolsa_municipio_none_municipio(self) -> None:
+        result = client._parse_bolsa_municipio({})
+        assert result.municipio is None
+        assert result.uf is None
+
+    def test_bolsa_sacado_string_municipio(self) -> None:
+        """When API returns municipio as a string instead of dict."""
+        result = client._parse_bolsa_sacado({"municipio": "Teresina"})
+        assert result.municipio is None  # String doesn't have .get("nomeIBGE")
+        assert result.uf is None
+
+    def test_bolsa_sacado_none_municipio(self) -> None:
+        result = client._parse_bolsa_sacado({})
+        assert result.municipio is None
+        assert result.uf is None
+
+    def test_sancao_all_none(self) -> None:
+        result = client._parse_sancao({}, "CEIS")
+        assert result.fonte == "CEIS"
+        assert result.nome is None
+
+    def test_emenda_autor_string(self) -> None:
+        """When autor is a string instead of dict."""
+        result = client._parse_emenda({"autor": "Dep. Fulano"})
+        assert result.autor == "Dep. Fulano"
+
+    def test_emenda_all_none(self) -> None:
+        result = client._parse_emenda({})
+        assert result.numero is None
+        assert result.autor is None
+
+    def test_viagem_all_none(self) -> None:
+        result = client._parse_viagem({})
+        assert result.nome is None
+        assert result.destino is None

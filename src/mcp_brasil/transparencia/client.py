@@ -27,6 +27,7 @@ import re
 from typing import Any
 
 from mcp_brasil._shared.http_client import http_get
+from mcp_brasil._shared.rate_limiter import RateLimiter
 from mcp_brasil.exceptions import AuthError
 
 from .constants import (
@@ -56,6 +57,9 @@ from .schemas import (
 
 logger = logging.getLogger(__name__)
 
+# 80 req/min — conservative margin below the 90 req/min daytime limit
+_rate_limiter = RateLimiter(max_requests=80, period=60.0)
+
 
 def _get_api_key() -> str:
     """Return the API key or raise AuthError."""
@@ -80,7 +84,25 @@ def _clean_cpf_cnpj(valor: str) -> str:
 
 async def _get(url: str, params: dict[str, Any] | None = None) -> Any:
     """Make an authenticated GET request to the Portal da Transparência API."""
-    return await http_get(url, params=params, headers=_auth_headers())
+    async with _rate_limiter:
+        return await http_get(url, params=params, headers=_auth_headers())
+
+
+def _safe_parse_list(
+    data: Any,
+    parser: Any,
+    endpoint: str,
+    **parser_kwargs: Any,
+) -> list[Any]:
+    """Parse a list response, logging a warning if the shape is unexpected."""
+    if isinstance(data, list):
+        return [parser(item, **parser_kwargs) for item in data]
+    logger.warning(
+        "Resposta inesperada (esperava list) do endpoint %s: %s",
+        endpoint,
+        type(data).__name__,
+    )
+    return []
 
 
 # --- Parsing helpers --------------------------------------------------------
@@ -145,9 +167,10 @@ def _parse_licitacao(raw: dict[str, Any]) -> Licitacao:
 
 def _parse_bolsa_municipio(raw: dict[str, Any]) -> BolsaFamiliaMunicipio:
     """Parse Bolsa Família municipality data."""
-    municipio = raw.get("municipio") or {}
+    raw_mun = raw.get("municipio")
+    municipio = raw_mun if isinstance(raw_mun, dict) else {}
     return BolsaFamiliaMunicipio(
-        municipio=municipio.get("nomeIBGE") or raw.get("municipio"),
+        municipio=municipio.get("nomeIBGE") or (raw_mun if isinstance(raw_mun, str) else None),
         uf=municipio.get("uf", {}).get("sigla") if isinstance(municipio.get("uf"), dict) else None,
         quantidade=raw.get("quantidadeBeneficiados"),
         valor=raw.get("valor"),
@@ -157,7 +180,8 @@ def _parse_bolsa_municipio(raw: dict[str, Any]) -> BolsaFamiliaMunicipio:
 
 def _parse_bolsa_sacado(raw: dict[str, Any]) -> BolsaFamiliaSacado:
     """Parse Bolsa Família NIS beneficiary data."""
-    municipio = raw.get("municipio") or {}
+    raw_mun = raw.get("municipio")
+    municipio = raw_mun if isinstance(raw_mun, dict) else {}
     return BolsaFamiliaSacado(
         nis=raw.get("nis"),
         nome=raw.get("nome"),
@@ -232,9 +256,7 @@ async def buscar_contratos(cpf_cnpj: str, pagina: int = 1) -> list[ContratoForne
     """
     params = {"cpfCnpj": _clean_cpf_cnpj(cpf_cnpj), "pagina": pagina}
     data = await _get(CONTRATOS_URL, params)
-    if isinstance(data, list):
-        return [_parse_contrato(item) for item in data]
-    return []
+    return _safe_parse_list(data, _parse_contrato, "contratos")
 
 
 async def consultar_despesas(
@@ -259,9 +281,7 @@ async def consultar_despesas(
     if codigo_favorecido:
         params["codigoFavorecido"] = _clean_cpf_cnpj(codigo_favorecido)
     data = await _get(DESPESAS_URL, params)
-    if isinstance(data, list):
-        return [_parse_recurso(item) for item in data]
-    return []
+    return _safe_parse_list(data, _parse_recurso, "despesas")
 
 
 async def buscar_servidores(
@@ -282,9 +302,7 @@ async def buscar_servidores(
     elif nome:
         params["nome"] = nome
     data = await _get(SERVIDORES_URL, params)
-    if isinstance(data, list):
-        return [_parse_servidor(item) for item in data]
-    return []
+    return _safe_parse_list(data, _parse_servidor, "servidores")
 
 
 async def buscar_licitacoes(
@@ -309,9 +327,7 @@ async def buscar_licitacoes(
     if data_final:
         params["dataFinal"] = data_final
     data = await _get(LICITACOES_URL, params)
-    if isinstance(data, list):
-        return [_parse_licitacao(item) for item in data]
-    return []
+    return _safe_parse_list(data, _parse_licitacao, "licitacoes")
 
 
 async def consultar_bolsa_familia_municipio(
@@ -332,9 +348,7 @@ async def consultar_bolsa_familia_municipio(
         "pagina": pagina,
     }
     data = await _get(BOLSA_FAMILIA_MUNICIPIO_URL, params)
-    if isinstance(data, list):
-        return [_parse_bolsa_municipio(item) for item in data]
-    return []
+    return _safe_parse_list(data, _parse_bolsa_municipio, "bolsa-familia-municipio")
 
 
 async def consultar_bolsa_familia_nis(
@@ -355,9 +369,7 @@ async def consultar_bolsa_familia_nis(
         "pagina": pagina,
     }
     data = await _get(BOLSA_FAMILIA_NIS_URL, params)
-    if isinstance(data, list):
-        return [_parse_bolsa_sacado(item) for item in data]
-    return []
+    return _safe_parse_list(data, _parse_bolsa_sacado, "bolsa-familia-nis")
 
 
 async def buscar_sancoes(
@@ -375,7 +387,6 @@ async def buscar_sancoes(
         pagina: Número da página.
     """
     bases_alvo = bases or list(SANCOES_DATABASES.keys())
-    headers = _auth_headers()
 
     async def _consultar_base(base_key: str) -> list[Sancao]:
         db = SANCOES_DATABASES.get(base_key)
@@ -393,9 +404,8 @@ async def buscar_sancoes(
             params = {param_key: consulta, "pagina": pagina}
 
         try:
-            data = await http_get(url, params=params, headers=headers)
-            if isinstance(data, list):
-                return [_parse_sancao(item, db["nome"]) for item in data]
+            data = await _get(url, params=params)
+            return _safe_parse_list(data, _parse_sancao, f"sancoes/{base_key}", fonte=db["nome"])
         except Exception:
             logger.warning("Falha ao consultar base %s para '%s'", base_key, consulta)
         return []
@@ -422,9 +432,7 @@ async def buscar_emendas(
     if nome_autor:
         params["nomeAutor"] = nome_autor
     data = await _get(EMENDAS_URL, params)
-    if isinstance(data, list):
-        return [_parse_emenda(item) for item in data]
-    return []
+    return _safe_parse_list(data, _parse_emenda, "emendas")
 
 
 async def consultar_viagens(cpf: str, pagina: int = 1) -> list[Viagem]:
@@ -436,6 +444,4 @@ async def consultar_viagens(cpf: str, pagina: int = 1) -> list[Viagem]:
     """
     params: dict[str, Any] = {"cpf": _clean_cpf_cnpj(cpf), "pagina": pagina}
     data = await _get(VIAGENS_URL, params)
-    if isinstance(data, list):
-        return [_parse_viagem(item) for item in data]
-    return []
+    return _safe_parse_list(data, _parse_viagem, "viagens")
