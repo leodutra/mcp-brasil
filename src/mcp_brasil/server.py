@@ -19,6 +19,7 @@ from fastmcp.resources import ResourceResult
 from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 from fastmcp.tools import ToolResult
 
+from ._shared.batch import build_dispatch, execute_batch
 from ._shared.feature import FeatureRegistry
 from ._shared.lifespan import http_lifespan
 from .settings import TOOL_SEARCH
@@ -86,6 +87,9 @@ registry.mount_all(mcp)
 
 logger.info("\n%s", registry.summary())
 
+# Build batch dispatch table for executar_lote
+build_dispatch(registry)
+
 
 # Expose a meta-tool for introspection
 @mcp.tool(tags={"meta", "discovery"})
@@ -120,10 +124,60 @@ async def recomendar_tools(query: str, ctx: Context) -> str:
     return await recomendar_tools_impl(query, catalog)
 
 
+@mcp.tool(tags={"meta", "discovery", "planejamento"})
+async def planejar_consulta(query: str, ctx: Context) -> str:
+    """Cria um plano de execução para consultas complexas.
+
+    Analisa a pergunta, identifica quais tools usar, em que ordem,
+    e quais etapas dependem de outras. Útil para consultas que
+    precisam de múltiplas chamadas combinadas.
+
+    Args:
+        query: Pergunta em linguagem natural
+               (ex: "compare os gastos do deputado X com a média").
+    """
+    from ._shared.discovery import build_catalog
+    from ._shared.planner import planejar_consulta_impl
+
+    await ctx.info(f"Planejando consulta: {query}")
+    catalog = build_catalog(registry)
+    return await planejar_consulta_impl(query, catalog)
+
+
+@mcp.tool(tags={"meta", "batch"})
+async def executar_lote(consultas: list[dict[str, object]], ctx: Context) -> str:
+    """Executa múltiplas tools em uma única chamada, em paralelo.
+
+    Use esta tool para evitar chamadas sequenciais quando precisar de dados
+    de várias fontes ou de vários anos/parâmetros ao mesmo tempo.
+
+    Cada consulta deve ter o nome completo da tool (com namespace, ex:
+    "camara_buscar_proposicao") e seus argumentos.
+
+    Args:
+        consultas: Lista de consultas. Cada item é um objeto com:
+                   - "tool": nome completo da tool (ex: "camara_despesas_deputado")
+                   - "args": objeto com os argumentos da tool
+                   Exemplo: [
+                     {"tool": "camara_despesas_deputado",
+                      "args": {"deputado_id": 204554, "ano": 2024}},
+                     {"tool": "camara_despesas_deputado",
+                      "args": {"deputado_id": 204554, "ano": 2023}}
+                   ]
+    """
+    await ctx.info(f"Executando lote de {len(consultas)} consulta(s)...")
+    return await execute_batch(consultas, ctx)
+
+
 # ---------------------------------------------------------------------------
 # Tool Search Transform — configurable via MCP_BRASIL_TOOL_SEARCH
 # ---------------------------------------------------------------------------
-_always_visible = ["listar_features", "recomendar_tools"]
+_always_visible = [
+    "listar_features",
+    "recomendar_tools",
+    "planejar_consulta",
+    "executar_lote",
+]
 
 if TOOL_SEARCH == "bm25":
     from fastmcp.server.transforms.search import BM25SearchTransform

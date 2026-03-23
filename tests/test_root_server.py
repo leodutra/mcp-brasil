@@ -26,6 +26,13 @@ class TestRootServerTools:
             assert "recomendar_tools" in names
 
     @pytest.mark.asyncio
+    async def test_planejar_consulta_registered(self) -> None:
+        async with Client(mcp) as c:
+            tools = await c.list_tools()
+            names = {t.name for t in tools}
+            assert "planejar_consulta" in names
+
+    @pytest.mark.asyncio
     async def test_ibge_tools_namespaced(self) -> None:
         async with Client(mcp) as c:
             tools = await c.list_tools()
@@ -142,6 +149,23 @@ class TestRootServerPrompts:
             assert "senado_acompanhar_materia" in names
             assert "senado_perfil_senador" in names
             assert "senado_analise_votacao_senado" in names
+
+
+class TestExecutarLote:
+    @pytest.mark.asyncio
+    async def test_registered(self) -> None:
+        async with Client(mcp) as c:
+            tools = await c.list_tools()
+            names = {t.name for t in tools}
+            assert "executar_lote" in names
+
+    @pytest.mark.asyncio
+    async def test_has_docstring(self) -> None:
+        async with Client(mcp) as c:
+            tools = await c.list_tools()
+            tool = next(t for t in tools if t.name == "executar_lote")
+            assert tool.description
+            assert "paralelo" in tool.description.lower()
 
 
 class TestRootServerToolTags:
