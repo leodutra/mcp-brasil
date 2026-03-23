@@ -1,186 +1,232 @@
-# mcp-brasil
+<div align="center">
 
-MCP servers para APIs públicas brasileiras.
+# mcp-brasil 🇧🇷
 
-Um único pacote Python que conecta AI agents (Claude, GPT, etc.) a dados governamentais do Brasil: IBGE, Banco Central, Portal da Transparência, Câmara dos Deputados, Senado Federal, DataJud e mais.
+**MCP Server para 27 APIs públicas brasileiras**
+
+[![PyPI](https://img.shields.io/pypi/v/mcp-brasil)](https://pypi.org/project/mcp-brasil/)
+[![Python](https://img.shields.io/pypi/pyversions/mcp-brasil)](https://pypi.org/project/mcp-brasil/)
+[![CI](https://img.shields.io/github/actions/workflow/status/jonatassoares/mcp-brasil/ci.yml)](https://github.com/jonatassoares/mcp-brasil/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+205 tools · 58 resources · 47 prompts
+
+Conecte AI agents (Claude, GPT, Copilot, etc.) a dados governamentais do Brasil — economia, legislação, transparência, judiciário, eleições, meio ambiente, saúde e mais.
+
+**24 APIs não requerem chave** · 2 usam chaves gratuitas (cadastro em 1 min)
+
+[Quick Start](#quick-start) · [Fontes de dados](#fontes-de-dados) · [Exemplos](#exemplos) · [Desenvolvimento](#desenvolvimento)
+
+</div>
+
+---
+
+## Features
+
+- **205 tools** em 27 features — econômico, legislativo, transparência, judiciário, eleitoral, ambiental, saúde, compras públicas
+- **Cross-referencing** com `planejar_consulta` — cria planos de execução combinando múltiplas APIs (ex: gastos de um deputado + votações + proposições)
+- **Execução em lote** com `executar_lote` — dispara consultas em paralelo numa única chamada
+- **Smart discovery** — BM25 search transform filtra 205 tools para só mostrar as relevantes ao contexto
+- **Auto-registry** — adicionar uma feature é criar uma pasta; zero configuração manual
+- **Async everywhere** — httpx async + Pydantic v2 + rate limiting com backoff
 
 ## Quick Start
 
+### Instalar
+
 ```bash
-# Instalar
-git clone https://github.com/seu-usuario/mcp-brasil.git
-cd mcp-brasil
-make dev
-
-# Rodar server (stdio)
-make run
-
-# Rodar via HTTP (:8000)
-make serve
+pip install mcp-brasil
 ```
 
-## Integrações
+```bash
+uv add mcp-brasil
+```
 
 ### Claude Desktop
 
-Adicione ao arquivo `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) ou `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+Adicione ao `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "mcp-brasil": {
-      "command": "/CAMINHO/PARA/uv",
-      "args": ["run", "--directory", "/CAMINHO/PARA/mcp-brasil", "python", "-m", "mcp_brasil.server"],
+      "command": "uvx",
+      "args": ["--from", "mcp-brasil", "python", "-m", "mcp_brasil.server"],
       "env": {
-        "TRANSPARENCIA_API_KEY": "sua-chave-aqui"
+        "TRANSPARENCIA_API_KEY": "sua-chave-aqui",
+        "DATAJUD_API_KEY": "sua-chave-aqui"
       }
     }
   }
 }
 ```
 
-> **Dica:** Descubra o caminho do `uv` com `which uv` no terminal.
+> As chaves são opcionais — sem elas, as 24 APIs restantes funcionam normalmente.
 
-Reinicie o Claude Desktop para ativar.
+### VS Code / Cursor
 
-### Cursor
-
-Crie o arquivo `.cursor/mcp.json` na raiz do projeto:
+Crie `.vscode/mcp.json` na raiz do projeto:
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "mcp-brasil": {
-      "command": "uv",
-      "args": ["run", "--directory", "/CAMINHO/PARA/mcp-brasil", "python", "-m", "mcp_brasil.server"],
+      "command": "uvx",
+      "args": ["--from", "mcp-brasil", "python", "-m", "mcp_brasil.server"],
       "env": {
-        "TRANSPARENCIA_API_KEY": "sua-chave-aqui"
+        "TRANSPARENCIA_API_KEY": "sua-chave-aqui",
+        "DATAJUD_API_KEY": "sua-chave-aqui"
       }
     }
   }
 }
 ```
-
-Depois em **Settings > MCP**, ative o server `mcp-brasil`.
 
 ### Claude Code
 
 ```bash
-claude mcp add mcp-brasil -s user -- \
-  uv run --directory /CAMINHO/PARA/mcp-brasil python -m mcp_brasil.server
+claude mcp add mcp-brasil -- uvx --from mcp-brasil python -m mcp_brasil.server
 ```
 
-### Outros clientes MCP (HTTP)
-
-Rode o server em modo HTTP e conecte via URL:
+### HTTP (outros clientes)
 
 ```bash
-make serve
+fastmcp run mcp_brasil.server:mcp --transport http --port 8000
 # Server disponível em http://localhost:8000/mcp
 ```
 
-## Features disponíveis
+## Exemplos
 
-| Feature | API | Tools | Auth | Status |
-|---------|-----|-------|------|--------|
-| `ibge` | servicodados.ibge.gov.br | 9 | Nenhuma | Ativo |
-| `bacen` | api.bcb.gov.br | 8 | Nenhuma | Ativo |
-| `transparencia` | portaldatransparencia.gov.br | — | API key gratuita | Em desenvolvimento |
-| `camara` | dadosabertos.camara.leg.br | — | Nenhuma | Planejado |
-| `senado` | legis.senado.leg.br | — | Nenhuma | Planejado |
-| `datajud` | api-publica.datajud.cnj.jus.br | — | API key CNJ | Planejado |
-| `brasilapi` | brasilapi.com.br | — | Nenhuma | Planejado |
-| `diario_oficial` | queridodiario.ok.org.br | — | Nenhuma | Planejado |
+Conecte o server e faça perguntas em linguagem natural:
 
-### IBGE (9 tools)
+> **Legislativo:** "Quais projetos de lei sobre inteligência artificial tramitaram na Câmara em 2024? Quem foram os autores?"
 
-- `listar_estados` — Lista os 27 estados brasileiros
-- `buscar_municipios` — Municípios de um estado por UF
-- `listar_regioes` — 5 macro-regiões do Brasil
-- `consultar_nome` — Frequência de um nome por década
-- `ranking_nomes` — Nomes mais populares do Brasil
-- `consultar_agregado` — Dados agregados (população, PIB, etc.)
-- `listar_pesquisas` — Pesquisas e agregados disponíveis
-- `obter_malha` — Metadados geográficos (centroide, área, bbox)
-- `buscar_cnae` — Classificação de atividades econômicas
+> **Econômico:** "Qual a tendência da taxa Selic nos últimos 12 meses? Compare com a inflação (IPCA) no mesmo período."
 
-### Banco Central (8 tools)
+> **Transparência:** "Quais os 10 maiores contratos do governo federal em 2024? Quem são os fornecedores?"
 
-- `consultar_serie` — Valores de uma série temporal do BCB
-- `ultimos_valores` — Últimos N valores de uma série
-- `metadados_serie` — Metadados de uma série (nome, unidade, periodicidade)
-- `series_populares` — Catálogo de séries mais usadas por categoria
-- `buscar_serie` — Busca textual no catálogo de séries
-- `indicadores_atuais` — Selic, IPCA, dólar e outros indicadores em tempo real
-- `calcular_variacao` — Estatísticas de variação de uma série
-- `comparar_series` — Compara múltiplas séries lado a lado
+> **Cross-reference:** "Compare os gastos per capita com saúde em São Paulo e Minas Gerais usando dados do TCE-SP e TCE do outro estado."
 
-## Arquitetura
+> **Judiciário:** "Busque processos sobre licitação irregular no TCU. Quais foram as penalidades aplicadas?"
 
-O projeto usa **Package by Feature** com **Auto-Registry**:
+> **Eleitoral:** "Quais os maiores doadores da campanha do candidato X? Qual o total arrecadado?"
 
-- Features são organizadas em `data/` (APIs) e `agentes/` (agentes inteligentes)
-- O server raiz descobre e monta features automaticamente via `FeatureRegistry`
-- Para adicionar uma nova feature, basta criar o diretório seguindo a convenção
+## Fontes de dados
 
-```
-src/mcp_brasil/
-├── server.py              # Auto-registry (nunca muda)
-├── _shared/               # Utilitários compartilhados
-│   └── feature.py         # FeatureMeta + FeatureRegistry
-├── data/                  # Features de consulta a APIs
-│   ├── ibge/              # Feature: IBGE
-│   │   ├── __init__.py    # FEATURE_META
-│   │   ├── server.py      # mcp: FastMCP
-│   │   ├── tools.py       # Lógica das tools
-│   │   ├── client.py      # HTTP async
-│   │   ├── schemas.py     # Pydantic models
-│   │   └── constants.py   # URLs, códigos
-│   ├── bacen/             # Feature: Banco Central
-│   └── ...
-├── agentes/               # Features de agentes inteligentes
-│   └── redator/           # Feature: Redator Oficial
-└── ...
-```
+| Categoria | Feature | API | Tools |
+|-----------|---------|-----|-------|
+| **Econômico** | `ibge` | IBGE — estados, municípios, nomes, agregados estatísticos | 9 |
+| | `bacen` | Banco Central — Selic, IPCA, câmbio, PIB e +190 séries | 9 |
+| **Legislativo** | `camara` | Câmara dos Deputados — deputados, proposições, votações, despesas | 10 |
+| | `senado` | Senado Federal — senadores, matérias, votações, comissões | 26 |
+| **Transparência / Fiscal** | `transparencia` | Portal da Transparência — contratos, despesas, servidores, sanções | 18 |
+| | `tcu` | Tribunal de Contas da União — acórdãos, licitantes inidôneos | 8 |
+| | `tce_sp` | TCE-SP — despesas e receitas de 645 municípios paulistas | 3 |
+| | `tce_rj` | TCE-RJ — licitações, contratos, obras, penalidades | 7 |
+| | `tce_rs` | TCE-RS — educação, saúde, gestão fiscal (LRF) | 5 |
+| | `tce_sc` | TCE-SC — municípios e unidades gestoras | 2 |
+| | `tce_pe` | TCE-PE — licitações, contratos, despesas, fornecedores | 5 |
+| | `tce_ce` | TCE-CE — licitações, contratos, empenhos | 4 |
+| | `tce_rn` | TCE-RN — jurisdicionados, licitações, contratos | 5 |
+| | `tce_pi` | TCE-PI — prefeituras, despesas, receitas | 5 |
+| | `tce_to` | TCE-TO — processos, pautas de sessões | 3 |
+| **Judiciário** | `datajud` | DataJud/CNJ — processos judiciais, movimentações | 7 |
+| | `jurisprudencia` | STF, STJ e TST — acórdãos, súmulas, decisões | 6 |
+| **Eleitoral** | `tse` | TSE — eleições, candidatos, prestação de contas | 15 |
+| **Ambiental** | `inpe` | INPE — focos de queimadas e desmatamento | 4 |
+| | `ana` | ANA — estações hidrológicas, telemetria, reservatórios | 3 |
+| **Saúde** | `saude` | CNES/DataSUS — estabelecimentos, profissionais, leitos | 4 |
+| **Compras Públicas** | `pncp` | PNCP — contratações públicas (Lei 14.133/2021) | 6 |
+| | `dadosabertos` | Compras.gov.br — SIASG/ComprasNet | 8 |
+| **Utilidades** | `brasilapi` | BrasilAPI — CEP, CNPJ, DDD, bancos, câmbio, FIPE, PIX | 16 |
+| | `dados_abertos` | Dados Abertos (dados.gov.br) — catálogo de datasets | 4 |
+| | `diario_oficial` | Querido Diário — diários oficiais de 5.000+ cidades | 4 |
+| | `transferegov` | TransfereGov — emendas parlamentares PIX | 5 |
+| **Agentes IA** | `redator` | Redator Oficial — ofício, despacho, portaria, parecer, nota técnica | 5 |
 
-### Fluxo dentro de cada feature
+Além das tools das features, o server raiz expõe 4 meta-tools: `listar_features`, `recomendar_tools`, `planejar_consulta` e `executar_lote`.
 
-```
-server.py  →  tools.py  →  client.py  →  schemas.py
-  registra     orquestra    faz HTTP      dados puros
+## Chaves de API
+
+| API | Obrigatória? | Como obter |
+|-----|-------------|------------|
+| Portal da Transparência | Opcional | [Cadastro gratuito](http://portaldatransparencia.gov.br/api-de-dados/cadastrar-email) |
+| DataJud/CNJ | Opcional | [Cadastro gratuito](https://datajud-wiki.cnj.jus.br/api-publica/acesso) |
+| Todas as outras (24) | Nenhuma chave | — |
+
+Configure via variáveis de ambiente ou `.env`:
+
+```bash
+TRANSPARENCIA_API_KEY=sua-chave
+DATAJUD_API_KEY=sua-chave
 ```
 
-Regras:
-- `tools.py` nunca faz HTTP direto — delega para `client.py`
-- `client.py` nunca formata para LLM — retorna Pydantic models
-- `schemas.py` apenas Pydantic models, zero lógica
-- `server.py` apenas registra tools/resources/prompts
+## Configuração
+
+| Variável | Default | Descrição |
+|----------|---------|-----------|
+| `TRANSPARENCIA_API_KEY` | — | Chave do Portal da Transparência |
+| `DATAJUD_API_KEY` | — | Chave do DataJud/CNJ |
+| `MCP_BRASIL_TOOL_SEARCH` | `bm25` | Modo de discovery: `bm25`, `code_mode` ou `none` |
+| `MCP_BRASIL_HTTP_TIMEOUT` | `30.0` | Timeout HTTP em segundos |
+| `MCP_BRASIL_HTTP_MAX_RETRIES` | `3` | Máximo de retentativas HTTP |
 
 ## Desenvolvimento
 
 ```bash
-make dev            # Instalar dependências (prod + dev)
-make test           # Rodar todos os testes
+git clone https://github.com/jonatassoares/mcp-brasil.git
+cd mcp-brasil
+make dev              # Instalar dependências (prod + dev)
+make test             # Rodar todos os testes
 make test-feature F=ibge  # Testes de uma feature
-make lint           # Lint + format check
-make fix            # Auto-fix lint + format
-make types          # mypy strict
-make ci             # lint + types + test
-make run            # Server stdio
-make serve          # Server HTTP :8000
-make inspect        # Listar tools/resources/prompts
-make clean          # Limpar caches
+make lint             # Lint + format check
+make ruff             # Auto-fix lint + format
+make types            # mypy strict
+make ci               # lint + types + test
+make run              # Server stdio
+make serve            # Server HTTP :8000
+make inspect          # Listar tools/resources/prompts
 ```
 
-## Como contribuir
+## Arquitetura
 
-1. Crie um diretório em `src/mcp_brasil/data/{feature}/` (APIs) ou `src/mcp_brasil/agentes/{feature}/` (agentes)
-2. Exporte `FEATURE_META` no `__init__.py`
-3. Exporte `mcp: FastMCP` no `server.py`
-4. Adicione testes em `tests/data/{feature}/` ou `tests/agentes/{feature}/`
+O projeto usa **Package by Feature** com **Auto-Registry** — cada feature é uma pasta auto-contida:
+
+```
+src/mcp_brasil/
+├── server.py              # Auto-registry (nunca editado manualmente)
+├── _shared/               # Utilitários compartilhados
+├── data/                  # 26 features de consulta a APIs
+│   ├── ibge/
+│   │   ├── __init__.py    # FEATURE_META
+│   │   ├── server.py      # FastMCP instance
+│   │   ├── tools.py       # Lógica das tools
+│   │   ├── client.py      # HTTP async
+│   │   ├── schemas.py     # Pydantic models
+│   │   └── constants.py   # URLs, códigos
+│   ├── bacen/
+│   └── ...
+└── agentes/               # Features de agentes inteligentes
+    └── redator/
+```
+
+Para adicionar uma nova feature, basta criar o diretório seguindo a convenção — o registry descobre automaticamente.
+
+## Contribuindo
+
+1. Fork o repositório
+2. Crie uma feature em `src/mcp_brasil/data/{feature}/` ou `agentes/{feature}/`
+3. Exporte `FEATURE_META` no `__init__.py` e `mcp: FastMCP` no `server.py`
+4. Adicione testes em `tests/data/{feature}/`
 5. Rode `make ci` e abra um PR
 
-Consulte `AGENTS.md` e `docs/adrs/` para padrões e decisões de arquitetura.
+## Disclaimer
+
+Este projeto integra um número significativo de APIs governamentais brasileiras, muitas com documentação inconsistente ou incompleta. Embora todo esforço tenha sido feito para garantir precisão, alguns endpoints podem retornar resultados inesperados ou ter cobertura parcial de parâmetros.
+
+Este é um projeto open-source da comunidade — se encontrar algo quebrado ou que possa ser melhorado, **abra uma issue ou envie um PR**. O objetivo é tornar dados públicos brasileiros acessíveis via IA, juntos.
+
+Todos os dados vêm de APIs oficiais do governo brasileiro — o server não gera, modifica ou editorializa nenhum dado.
 
 ## Licença
 

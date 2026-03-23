@@ -842,6 +842,7 @@ name = "mcp-brasil"
 version = "0.3.0"
 source = { editable = "." }
 dependencies = [
+    { name = "anthropic" },
     { name = "fastmcp", extra = ["code-mode"] },
     { name = "httpx" },
     { name = "pydantic" },
@@ -867,6 +868,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "anthropic", specifier = ">=0.40" },
     { name = "anthropic", marker = "extra == 'llm'", specifier = ">=0.40" },
     { name = "fastmcp", extras = ["code-mode"], specifier = ">=3.0" },
     { name = "fastmcp", extras = ["code-mode"], marker = "extra == 'code-mode'" },
