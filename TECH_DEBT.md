@@ -68,7 +68,7 @@
 - [ ] **API is unofficial** — DivulgaCandContas API is reverse-engineered. No official documentation. Endpoints may change without notice.
 - [x] **No result totalization** — Resolvido. Adicionada tool `resultado_eleicao` que rankeia candidatos por votos. `buscar_candidato` enriquecido com `descricao_totalizacao` e `total_votos`. Novo modelo `ResultadoCandidato`. 47 testes passam.
 - [x] **Sem dados de votação por município** — Resolvido para eleições municipais. Adicionadas `listar_municipios_eleitorais` e `resultado_por_municipio` (CDN formato `-u.json`). Disponível para 2024 (prefeito, vereador).
-- [ ] **CDN não tem dados por município para eleições federais** — O CDN do TSE (`resultados.tse.jus.br`) não disponibiliza dados de votação por município para eleições federais (2022 — presidente, governador, senador). URLs `dados/{uf}/{uf}{cod}-c{cargo}-e{eleicao}-u.json` retornam 404 para eleições federais.
+- [x] **CDN tem dados por município para eleições federais** — Resolvido. O CDN usa sufixo `-v.json` (votos) para 2022 e `-u.json` (unificado) para 2024. O formato `-v.json` não inclui nomes de candidatos (apenas números), enriquecido automaticamente via dados estaduais (`-r.json`). `resultado_municipio()` agora detecta o formato pelo ano.
 - [x] **CDN paths com election code padded causavam 404** — URLs usavam `/000544/` (padded) no path quando o CDN exige `/544/` (unpadded). Padded é usado apenas no filename (`e000544`). Corrigido `ELEICOES_CDN` para armazenar 3 valores `(ciclo, padded, unpadded)`.
 - [x] **CDN usa election codes separados por cargo** — O CDN do TSE usa election codes diferentes por tipo de cargo: 544/545 = presidente, 546/547 = governador+senador+deputados, 619/620 = prefeito+vereador. `ELEICOES_CDN` agora indexa por `(ano, turno, cargo_code)`. Adicionado `_resolve_eleicao_any()` para config files compartilhados.
 
@@ -134,6 +134,15 @@
 - [x] **Feature criada do zero** — 4 tools (buscar_focos_queimadas, consultar_desmatamento, alertas_deter, dados_satelite) + resources + prompt + 31 testes. APIs TerraBrasilis sem auth.
 - [ ] **APIs não padronizadas** — BD Queimadas e TerraBrasilis APIs podem ter formatos diferentes dos implementados. Endpoints precisam validação real.
 - [ ] **DETER/PRODES endpoints incertos** — Business API do TerraBrasilis pode não expor dados via REST diretamente. Formato de resposta baseado em documentação parcial.
+
+## Tool Discovery & Search
+
+- [x] **Tags on all tools** — Added semantic tags to all 154+ tools across 19 features. Tags use action type (consulta, busca, listagem, detalhe, calculo, validacao, formatacao, comparacao) + domain-specific tags.
+- [x] **BM25 search transform** — `BM25SearchTransform` replaces 154+ tool listing with `search_tools` + `call_tool`. Configurable via `MCP_BRASIL_TOOL_SEARCH` env var (`bm25`|`none`|`code_mode`).
+- [x] **recomendar_tools** — LLM-powered tool recommendation using Anthropic API (claude-haiku-4-5). `anthropic` is optional dependency (`pip install mcp-brasil[llm]`). Gracefully degrades when not installed or API key missing.
+- [x] **CodeMode experimental** — Opt-in via `MCP_BRASIL_TOOL_SEARCH=code_mode`. Uses Search + GetTags + GetSchemas + execute sandbox. Requires `fastmcp[code-mode]` extra.
+- [ ] **BM25 may not index tags** — BM25SearchTransform searches tool names, descriptions, and parameter names but may not directly index tags. Tags are useful for CodeMode's GetTags discovery tool.
+- [ ] **recomendar_tools catalog uses private API** — `build_catalog()` accesses `server._tool_manager._tools` which is a private FastMCP internal. May break on FastMCP upgrades.
 
 ## Known Limitations
 
