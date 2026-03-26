@@ -6,17 +6,43 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [{ name = "mcp-brasil contributors" }]
-keywords = ["mcp", "brasil", "government", "api", "fastmcp"]
+keywords = [
+    "mcp",
+    "brasil",
+    "brazil",
+    "government",
+    "api",
+    "fastmcp",
+    "ai",
+    "llm",
+    "claude",
+    "opendata",
+    "dados-abertos",
+    "ibge",
+    "bacen",
+    "transparencia",
+    "legislacao",
+    "model-context-protocol",
+    "agent",
+    "async",
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
+    "Natural Language :: Portuguese (Brazilian)",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Typing :: Typed",
 ]
 dependencies = [
     "fastmcp[code-mode]>=3.0",
