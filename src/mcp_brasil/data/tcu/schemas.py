@@ -18,7 +18,7 @@ class Acordao(BaseModel):
     data_sessao: str = Field(default="", alias="dataSessao")
     relator: str = ""
     situacao: str = ""
-    sumario: str = ""
+    sumario: str | None = ""
     url_acordao: str = Field(default="", alias="urlAcordao")
 
     model_config = {"populate_by_name": True}

@@ -71,6 +71,171 @@ class TestConsultarAcordaos:
         assert "Nenhum acórdão" in result
 
     @pytest.mark.asyncio
+    async def test_filter_by_colegiado(self) -> None:
+        mock_data = [
+            Acordao(
+                key="A1",
+                anoAcordao="2026",
+                numeroAcordao="100",
+                colegiado="Plenário",
+                relator="BRUNO DANTAS",
+                sumario="Embargos",
+            ),
+            Acordao(
+                key="A2",
+                anoAcordao="2026",
+                numeroAcordao="200",
+                colegiado="1ª Câmara",
+                relator="ANA ARRAES",
+                sumario="Recurso",
+            ),
+        ]
+        ctx = _mock_ctx()
+        with patch(
+            f"{CLIENT_MODULE}.consultar_acordaos",
+            new_callable=AsyncMock,
+            return_value=mock_data,
+        ):
+            result = await tools.consultar_acordaos(ctx, colegiado="Plenário")
+        assert "BRUNO DANTAS" in result
+        assert "ANA ARRAES" not in result
+        assert "colegiado: 'Plenário'" in result
+
+    @pytest.mark.asyncio
+    async def test_filter_by_relator(self) -> None:
+        mock_data = [
+            Acordao(
+                key="A1",
+                anoAcordao="2026",
+                numeroAcordao="100",
+                colegiado="Plenário",
+                relator="BRUNO DANTAS",
+                sumario="Embargos",
+            ),
+            Acordao(
+                key="A2",
+                anoAcordao="2026",
+                numeroAcordao="200",
+                colegiado="1ª Câmara",
+                relator="ANA ARRAES",
+                sumario="Recurso",
+            ),
+        ]
+        ctx = _mock_ctx()
+        with patch(
+            f"{CLIENT_MODULE}.consultar_acordaos",
+            new_callable=AsyncMock,
+            return_value=mock_data,
+        ):
+            result = await tools.consultar_acordaos(ctx, relator="arraes")
+        assert "ANA ARRAES" in result
+        assert "BRUNO DANTAS" not in result
+
+    @pytest.mark.asyncio
+    async def test_filter_by_ano(self) -> None:
+        mock_data = [
+            Acordao(
+                key="A1",
+                anoAcordao="2026",
+                numeroAcordao="100",
+                colegiado="Plenário",
+                relator="BRUNO DANTAS",
+                sumario="Embargos",
+            ),
+            Acordao(
+                key="A2",
+                anoAcordao="2025",
+                numeroAcordao="200",
+                colegiado="1ª Câmara",
+                relator="ANA ARRAES",
+                sumario="Recurso",
+            ),
+        ]
+        ctx = _mock_ctx()
+        with patch(
+            f"{CLIENT_MODULE}.consultar_acordaos",
+            new_callable=AsyncMock,
+            return_value=mock_data,
+        ):
+            result = await tools.consultar_acordaos(ctx, ano="2025")
+        assert "ANA ARRAES" in result
+        assert "BRUNO DANTAS" not in result
+
+    @pytest.mark.asyncio
+    async def test_filter_by_busca(self) -> None:
+        mock_data = [
+            Acordao(
+                key="A1",
+                anoAcordao="2026",
+                numeroAcordao="100",
+                colegiado="Plenário",
+                relator="BRUNO DANTAS",
+                sumario="EMBARGOS DE DECLARAÇÃO em recurso",
+            ),
+            Acordao(
+                key="A2",
+                anoAcordao="2026",
+                numeroAcordao="200",
+                colegiado="1ª Câmara",
+                relator="ANA ARRAES",
+                sumario="TOMADA DE CONTAS ESPECIAL",
+            ),
+        ]
+        ctx = _mock_ctx()
+        with patch(
+            f"{CLIENT_MODULE}.consultar_acordaos",
+            new_callable=AsyncMock,
+            return_value=mock_data,
+        ):
+            result = await tools.consultar_acordaos(ctx, busca="embargos")
+        assert "BRUNO DANTAS" in result
+        assert "ANA ARRAES" not in result
+        assert "busca: 'embargos'" in result
+
+    @pytest.mark.asyncio
+    async def test_filter_empty_result(self) -> None:
+        mock_data = [
+            Acordao(
+                key="A1",
+                anoAcordao="2026",
+                numeroAcordao="100",
+                colegiado="Plenário",
+                relator="BRUNO DANTAS",
+                sumario="Embargos",
+            ),
+        ]
+        ctx = _mock_ctx()
+        with patch(
+            f"{CLIENT_MODULE}.consultar_acordaos",
+            new_callable=AsyncMock,
+            return_value=mock_data,
+        ):
+            result = await tools.consultar_acordaos(ctx, relator="inexistente")
+        assert "Nenhum acórdão" in result
+
+    @pytest.mark.asyncio
+    async def test_filter_fetches_larger_batch(self) -> None:
+        mock_data = [
+            Acordao(
+                key="A1",
+                anoAcordao="2026",
+                numeroAcordao="100",
+                colegiado="Plenário",
+                relator="BRUNO DANTAS",
+                sumario="Embargos",
+            ),
+        ]
+        ctx = _mock_ctx()
+        with patch(
+            f"{CLIENT_MODULE}.consultar_acordaos",
+            new_callable=AsyncMock,
+            return_value=mock_data,
+        ) as mock_client:
+            await tools.consultar_acordaos(ctx, quantidade=10, ano="2026")
+        # With filters, should fetch max(10*10, 200) = 200
+        mock_client.assert_called_once_with(inicio=0, quantidade=200)
+
+    @pytest.mark.asyncio
     async def test_truncates_long_sumario(self) -> None:
         mock_data = [
             Acordao(

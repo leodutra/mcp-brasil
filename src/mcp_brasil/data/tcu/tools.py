@@ -20,25 +20,62 @@ async def consultar_acordaos(
     ctx: Context,
     quantidade: int = 10,
     inicio: int = 0,
+    colegiado: str | None = None,
+    relator: str | None = None,
+    ano: str | None = None,
+    busca: str | None = None,
 ) -> str:
     """Consulta acórdãos (decisões colegiadas) do TCU.
 
     Acórdãos são decisões dos colegiados do TCU (Plenário, 1ª e 2ª Câmaras).
     Retorna título, relator, colegiado, data da sessão e sumário.
 
+    Aceita filtros opcionais para refinar a busca. Quando filtros são usados,
+    busca um lote maior da API e filtra localmente.
+
     Args:
-        quantidade: Quantidade de acórdãos a retornar (padrão: 10, máximo recomendado: 50).
+        quantidade: Quantidade de acórdãos a exibir (padrão: 10).
         inicio: Índice inicial para paginação (padrão: 0).
+        colegiado: Filtrar por colegiado ('Plenário', '1ª Câmara' ou '2ª Câmara').
+        relator: Filtrar por nome do relator (case-insensitive, busca parcial).
+        ano: Filtrar por ano do acórdão (ex: '2026').
+        busca: Busca textual no sumário e título (case-insensitive, busca parcial).
 
     Returns:
         Tabela com os acórdãos encontrados.
     """
-    await ctx.info(f"Buscando {quantidade} acórdãos do TCU (início: {inicio})...")
-    acordaos = await client.consultar_acordaos(inicio=inicio, quantidade=quantidade)
-    await ctx.info(f"{len(acordaos)} acórdãos encontrados")
+    tem_filtro = any([colegiado, relator, ano, busca])
+    # Com filtros, buscar lote maior para ter pool suficiente
+    qtd_fetch = max(quantidade * 10, 200) if tem_filtro else quantidade
+
+    await ctx.info(f"Buscando acórdãos do TCU (início: {inicio})...")
+    acordaos = await client.consultar_acordaos(inicio=inicio, quantidade=qtd_fetch)
+    await ctx.info(f"{len(acordaos)} acórdãos obtidos da API")
+
+    # Filtros client-side
+    if colegiado:
+        colegiado_upper = colegiado.upper()
+        acordaos = [a for a in acordaos if colegiado_upper in a.colegiado.upper()]
+    if relator:
+        relator_upper = relator.upper()
+        acordaos = [a for a in acordaos if relator_upper in a.relator.upper()]
+    if ano:
+        acordaos = [a for a in acordaos if a.ano_acordao == ano]
+    if busca:
+        busca_upper = busca.upper()
+        acordaos = [
+            a
+            for a in acordaos
+            if busca_upper in (a.sumario or "").upper() or busca_upper in a.titulo.upper()
+        ]
+
+    if tem_filtro:
+        await ctx.info(f"{len(acordaos)} acórdãos após filtros")
 
     if not acordaos:
         return "Nenhum acórdão encontrado."
+
+    acordaos_exibir = acordaos[:quantidade]
 
     rows = [
         (
@@ -47,11 +84,28 @@ async def consultar_acordaos(
             a.colegiado,
             a.relator,
             a.data_sessao,
-            a.sumario[:100] + "..." if len(a.sumario) > 100 else a.sumario,
+            (a.sumario[:100] + "..." if len(a.sumario or "") > 100 else a.sumario) or "—",
         )
-        for a in acordaos
+        for a in acordaos_exibir
     ]
-    return markdown_table(
+
+    header = ""
+    if tem_filtro:
+        filtros = []
+        if colegiado:
+            filtros.append(f"colegiado: '{colegiado}'")
+        if relator:
+            filtros.append(f"relator: '{relator}'")
+        if ano:
+            filtros.append(f"ano: {ano}")
+        if busca:
+            filtros.append(f"busca: '{busca}'")
+        header = (
+            f"Acórdãos do TCU ({len(acordaos)} encontrados, "
+            f"{', '.join(filtros)}, exibindo {len(acordaos_exibir)}):\n\n"
+        )
+
+    return header + markdown_table(
         ["Número", "Ano", "Colegiado", "Relator", "Data Sessão", "Sumário"],
         rows,
     )
