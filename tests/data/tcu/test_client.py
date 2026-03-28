@@ -12,6 +12,7 @@ from mcp_brasil.data.tcu.constants import (
     CERTIDOES_URL,
     INABILITADOS_URL,
     INIDONEOS_URL,
+    PAUTAS_SESSAO_URL,
     PEDIDOS_CONGRESSO_URL,
     TERMOS_CONTRATUAIS_URL,
 )
@@ -249,6 +250,40 @@ class TestConsultarTermosContratuais:
         assert len(result) == 1
         assert result[0].nome_fornecedor == "LABORATORIO RICHET"
         assert result[0].valor_inicial == 5271.82
+
+
+class TestConsultarPautasSessao:
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_returns_list(self) -> None:
+        respx.get(PAUTAS_SESSAO_URL).mock(
+            return_value=httpx.Response(
+                200,
+                json=[
+                    {
+                        "nomeColegiado": "Plenário",
+                        "siglaColegiado": "PL",
+                        "dataSessao": "18/03/2026",
+                        "siglaRelator": "MIN-BD",
+                        "nomeRelator": "BRUNO DANTAS",
+                        "numeroProcesso": "001.438/2020-0",
+                        "naturezaProcesso": "CONTROLE EXTERNO",
+                        "tipoProcesso": "TOMADA DE CONTAS ESPECIAL",
+                    }
+                ],
+            )
+        )
+        result = await client.consultar_pautas_sessao()
+        assert len(result) == 1
+        assert result[0].nome_relator == "BRUNO DANTAS"
+        assert result[0].nome_colegiado == "Plenário"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_empty(self) -> None:
+        respx.get(PAUTAS_SESSAO_URL).mock(return_value=httpx.Response(200, json=[]))
+        result = await client.consultar_pautas_sessao()
+        assert result == []
 
 
 class TestConsultarCadirreg:

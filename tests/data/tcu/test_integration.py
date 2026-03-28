@@ -13,7 +13,7 @@ CLIENT_MODULE = "mcp_brasil.data.tcu.client"
 
 class TestToolsRegistered:
     @pytest.mark.asyncio
-    async def test_all_8_tools_registered(self) -> None:
+    async def test_all_9_tools_registered(self) -> None:
         async with Client(mcp) as c:
             tool_list = await c.list_tools()
             names = {t.name for t in tool_list}
@@ -24,6 +24,7 @@ class TestToolsRegistered:
                 "consultar_certidoes",
                 "calcular_debito",
                 "consultar_pedidos_congresso",
+                "consultar_pautas_sessao",
                 "consultar_termos_contratuais",
                 "consultar_cadirreg",
             }

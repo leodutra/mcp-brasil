@@ -9,6 +9,7 @@ TCU_CONTRATA_BASE = "https://contas.tcu.gov.br/contrata2RS/api/publico"
 
 # Endpoints — dados-abertos
 ACORDAOS_URL = f"{TCU_DADOS_ABERTOS_BASE}/acordao/recupera-acordaos"
+PAUTAS_SESSAO_URL = f"{TCU_DADOS_ABERTOS_BASE}/pautassessao"
 CADIRREG_URL = f"{TCU_DADOS_ABERTOS_BASE}/recuperapessoacadirreg"
 
 # Endpoints — ORDS (Oracle REST Data Services)

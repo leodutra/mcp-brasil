@@ -24,6 +24,7 @@ from .constants import (
     CERTIDOES_URL,
     INABILITADOS_URL,
     INIDONEOS_URL,
+    PAUTAS_SESSAO_URL,
     PEDIDOS_CONGRESSO_URL,
     TERMOS_CONTRATUAIS_URL,
 )
@@ -33,6 +34,7 @@ from .schemas import (
     Inabilitado,
     Inidoneo,
     ParcelaDebito,
+    PautaSessao,
     PedidoCongresso,
     PessoaCadirreg,
     ResultadoDebito,
@@ -168,6 +170,17 @@ async def calcular_debito(
     }
     data: dict[str, Any] = await http_post(CALCULAR_DEBITO_URL, json_body=body)
     return ResultadoDebito(**data)
+
+
+async def consultar_pautas_sessao() -> list[PautaSessao]:
+    """Fetch pautas de sessões de julgamento do TCU.
+
+    API: GET https://dados-abertos.apps.tcu.gov.br/api/pautassessao
+
+    Nota: Retorna TODOS os registros (sem paginação). Dataset grande.
+    """
+    data: list[dict[str, Any]] = await http_get(PAUTAS_SESSAO_URL, timeout=120.0)
+    return [PautaSessao(**item) for item in data]
 
 
 async def consultar_termos_contratuais() -> list[TermoContratual]:

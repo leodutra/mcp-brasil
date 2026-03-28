@@ -129,6 +129,21 @@ class TermoContratual(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class PautaSessao(BaseModel):
+    """Pauta de sessão de julgamento do TCU."""
+
+    nome_colegiado: str = Field(default="", alias="nomeColegiado")
+    sigla_colegiado: str = Field(default="", alias="siglaColegiado")
+    data_sessao: str = Field(default="", alias="dataSessao")
+    sigla_relator: str = Field(default="", alias="siglaRelator")
+    nome_relator: str = Field(default="", alias="nomeRelator")
+    numero_processo: str = Field(default="", alias="numeroProcesso")
+    natureza_processo: str = Field(default="", alias="naturezaProcesso")
+    tipo_processo: str = Field(default="", alias="tipoProcesso")
+
+    model_config = {"populate_by_name": True}
+
+
 class PessoaCadirreg(BaseModel):
     """Pessoa com contas julgadas irregulares pelo TCU (CADIRREG)."""
 

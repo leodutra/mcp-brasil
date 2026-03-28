@@ -11,6 +11,7 @@ from mcp_brasil.data.tcu.schemas import (
     CertidaoItem,
     Inabilitado,
     Inidoneo,
+    PautaSessao,
     PedidoCongresso,
     PessoaCadirreg,
     ResultadoDebito,
@@ -541,6 +542,119 @@ class TestConsultarTermosContratuais:
         ):
             result = await tools.consultar_termos_contratuais(ctx, ano=2020)
         assert "Nenhum termo" in result
+
+
+class TestConsultarPautasSessao:
+    @pytest.mark.asyncio
+    async def test_formats_table(self) -> None:
+        mock_data = [
+            PautaSessao(
+                nomeColegiado="Plenário",
+                siglaColegiado="PL",
+                dataSessao="18/03/2026",
+                siglaRelator="MIN-BD",
+                nomeRelator="BRUNO DANTAS",
+                numeroProcesso="001.438/2020-0",
+                naturezaProcesso="CONTROLE EXTERNO",
+                tipoProcesso="TOMADA DE CONTAS ESPECIAL",
+            ),
+        ]
+        ctx = _mock_ctx()
+        with patch(
+            f"{CLIENT_MODULE}.consultar_pautas_sessao",
+            new_callable=AsyncMock,
+            return_value=mock_data,
+        ):
+            result = await tools.consultar_pautas_sessao(ctx)
+        assert "BRUNO DANTAS" in result
+        assert "001.438/2020-0" in result
+        assert "Plenário" in result
+        assert "TOMADA DE CONTAS ESPECIAL" in result
+
+    @pytest.mark.asyncio
+    async def test_filter_by_colegiado(self) -> None:
+        mock_data = [
+            PautaSessao(
+                nomeColegiado="Plenário",
+                nomeRelator="BRUNO DANTAS",
+                numeroProcesso="001/2026",
+                tipoProcesso="TCE",
+            ),
+            PautaSessao(
+                nomeColegiado="Segunda Câmara",
+                nomeRelator="ANA ARRAES",
+                numeroProcesso="002/2026",
+                tipoProcesso="APOSENTADORIA",
+            ),
+        ]
+        ctx = _mock_ctx()
+        with patch(
+            f"{CLIENT_MODULE}.consultar_pautas_sessao",
+            new_callable=AsyncMock,
+            return_value=mock_data,
+        ):
+            result = await tools.consultar_pautas_sessao(ctx, colegiado="Plenário")
+        assert "BRUNO DANTAS" in result
+        assert "ANA ARRAES" not in result
+
+    @pytest.mark.asyncio
+    async def test_filter_by_relator(self) -> None:
+        mock_data = [
+            PautaSessao(
+                nomeColegiado="Plenário",
+                nomeRelator="BRUNO DANTAS",
+                numeroProcesso="001/2026",
+            ),
+            PautaSessao(
+                nomeColegiado="Plenário",
+                nomeRelator="ANA ARRAES",
+                numeroProcesso="002/2026",
+            ),
+        ]
+        ctx = _mock_ctx()
+        with patch(
+            f"{CLIENT_MODULE}.consultar_pautas_sessao",
+            new_callable=AsyncMock,
+            return_value=mock_data,
+        ):
+            result = await tools.consultar_pautas_sessao(ctx, relator="arraes")
+        assert "ANA ARRAES" in result
+        assert "BRUNO DANTAS" not in result
+
+    @pytest.mark.asyncio
+    async def test_filter_by_numero_processo(self) -> None:
+        mock_data = [
+            PautaSessao(
+                nomeColegiado="Plenário",
+                nomeRelator="BRUNO DANTAS",
+                numeroProcesso="001.438/2020-0",
+            ),
+            PautaSessao(
+                nomeColegiado="Plenário",
+                nomeRelator="ANA ARRAES",
+                numeroProcesso="999.999/2025-1",
+            ),
+        ]
+        ctx = _mock_ctx()
+        with patch(
+            f"{CLIENT_MODULE}.consultar_pautas_sessao",
+            new_callable=AsyncMock,
+            return_value=mock_data,
+        ):
+            result = await tools.consultar_pautas_sessao(ctx, numero_processo="001.438")
+        assert "BRUNO DANTAS" in result
+        assert "ANA ARRAES" not in result
+
+    @pytest.mark.asyncio
+    async def test_empty(self) -> None:
+        ctx = _mock_ctx()
+        with patch(
+            f"{CLIENT_MODULE}.consultar_pautas_sessao",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            result = await tools.consultar_pautas_sessao(ctx)
+        assert "Nenhuma pauta" in result
 
 
 class TestConsultarCadirreg:

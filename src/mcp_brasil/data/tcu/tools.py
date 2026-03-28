@@ -409,6 +409,88 @@ async def consultar_termos_contratuais(
     )
 
 
+async def consultar_pautas_sessao(
+    ctx: Context,
+    colegiado: str | None = None,
+    relator: str | None = None,
+    numero_processo: str | None = None,
+    tipo_processo: str | None = None,
+    limite: int = 20,
+) -> str:
+    """Consulta pautas de sessões de julgamento do TCU.
+
+    Retorna processos pautados para julgamento nos colegiados do TCU
+    (Plenário, 1ª Câmara, 2ª Câmara). A API retorna todos os registros,
+    por isso filtros são recomendados.
+
+    Args:
+        colegiado: Filtrar por colegiado ('Plenário', '1ª Câmara' ou '2ª Câmara').
+        relator: Filtrar por nome do relator (case-insensitive, busca parcial).
+        numero_processo: Filtrar por número do processo (busca parcial).
+        tipo_processo: Filtrar por tipo de processo (ex: 'TOMADA DE CONTAS', 'APOSENTADORIA').
+        limite: Quantidade máxima de registros a exibir (padrão: 20).
+
+    Returns:
+        Tabela com as pautas encontradas.
+    """
+    await ctx.info("Buscando pautas de sessão do TCU...")
+    pautas = await client.consultar_pautas_sessao()
+    await ctx.info(f"{len(pautas)} pautas obtidas no total")
+
+    # Filtros client-side
+    if colegiado:
+        colegiado_upper = colegiado.upper()
+        pautas = [p for p in pautas if colegiado_upper in p.nome_colegiado.upper()]
+    if relator:
+        relator_upper = relator.upper()
+        pautas = [p for p in pautas if relator_upper in p.nome_relator.upper()]
+    if numero_processo:
+        pautas = [p for p in pautas if numero_processo in p.numero_processo]
+    if tipo_processo:
+        tipo_upper = tipo_processo.upper()
+        pautas = [p for p in pautas if tipo_upper in p.tipo_processo.upper()]
+
+    tem_filtro = any([colegiado, relator, numero_processo, tipo_processo])
+    if tem_filtro:
+        await ctx.info(f"{len(pautas)} pautas após filtros")
+
+    if not pautas:
+        return "Nenhuma pauta de sessão encontrada."
+
+    pautas_exibir = pautas[:limite]
+
+    rows = [
+        (
+            p.data_sessao,
+            p.nome_colegiado,
+            p.nome_relator,
+            p.numero_processo,
+            p.tipo_processo,
+            p.natureza_processo,
+        )
+        for p in pautas_exibir
+    ]
+
+    header = f"Pautas de sessão do TCU ({len(pautas)} encontradas"
+    filtros = []
+    if colegiado:
+        filtros.append(f"colegiado: '{colegiado}'")
+    if relator:
+        filtros.append(f"relator: '{relator}'")
+    if numero_processo:
+        filtros.append(f"processo: '{numero_processo}'")
+    if tipo_processo:
+        filtros.append(f"tipo: '{tipo_processo}'")
+    if filtros:
+        header += f", {', '.join(filtros)}"
+    header += f", exibindo {len(pautas_exibir)}):\n\n"
+
+    return header + markdown_table(
+        ["Data Sessão", "Colegiado", "Relator", "Processo", "Tipo", "Natureza"],
+        rows,
+    )
+
+
 async def consultar_cadirreg(ctx: Context, cpf: str) -> str:
     """Consulta pessoa no CADIRREG — Cadastro de Responsáveis com Contas Irregulares.
 
