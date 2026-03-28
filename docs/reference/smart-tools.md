@@ -127,19 +127,29 @@ Para consultas complexas, o fluxo ideal e:
 4. LLM sintetiza os resultados
 ```
 
-## Tool Search (BM25)
+## Tool Search
 
-Com 205 tools disponiveis, enviar todas ao LLM seria ineficiente. O BM25 Search Transform filtra automaticamente:
+Com 309 tools disponiveis, enviar todas ao LLM seria ineficiente. O mcp-brasil oferece 3 modos de discovery, configuravel via `MCP_BRASIL_TOOL_SEARCH`:
+
+| Valor | Comportamento |
+|-------|---------------|
+| `bm25` (default) | Filtra para top-10 relevantes por contexto |
+| `code_mode` | Discovery progressivo + sandbox Python ([ver docs](code-mode.md)) |
+| `none` | Todas as 309 tools visiveis |
+
+### BM25 (padrao)
+
+Filtra automaticamente:
 
 - Analisa o contexto da conversa
 - Ranqueia tools por relevancia (BM25 scoring)
 - Retorna apenas as top-10 mais relevantes
 - Meta-tools (`listar_features`, `recomendar_tools`, etc.) sempre ficam visiveis
 
-Configuravel via `MCP_BRASIL_TOOL_SEARCH`:
+### Code Mode (experimental)
 
-| Valor | Comportamento |
-|-------|---------------|
-| `bm25` (default) | Filtra para top-10 relevantes |
-| `none` | Todas as 205 tools visiveis |
-| `code_mode` | Experimental — discovery programatico |
+Substitui todas as tools por 4 meta-tools de discovery: `get_tags`, `search`, `get_schema` e `execute`. O LLM descobre tools sob demanda e pode encadear chamadas em um sandbox Python.
+
+Ideal para workflows complexos que combinam 3+ APIs. Requer `pydantic-monty` (ja incluso no pacote). Faz fallback automatico para BM25 se nao disponivel.
+
+**Documentacao completa:** [Code Mode](code-mode.md)

@@ -249,6 +249,7 @@ META_ACCESS_TOKEN=seu-token
 | [Adicionando Features](docs/guide/adding-features.md) | Guia para contribuir com novas APIs |
 | [Configuração](docs/reference/configuration.md) | Variáveis de ambiente e opções |
 | [Meta Ad Library API](docs/reference/meta-ad-library-api.md) | Referência da API de anúncios eleitorais da Meta |
+| [Code Mode](docs/reference/code-mode.md) | Discovery programático + sandbox Python (experimental) |
 | [Desenvolvimento](docs/guide/development.md) | Setup de dev, testes, lint, CI |
 
 ## Casos de Uso
