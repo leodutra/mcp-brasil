@@ -61,7 +61,7 @@ class TestPromptsRegistered:
         async with Client(mcp) as c:
             prompts = await c.list_prompts()
             names = {p.name for p in prompts}
-            expected = {"analise_candidato", "comparativo_eleicao"}
+            expected = {"analise_candidato", "panorama_eleicao"}
             assert expected.issubset(names), f"Missing: {expected - names}"
 
 

@@ -5,7 +5,7 @@ This file only registers components. Zero business logic (ADR-001 rule #4).
 
 from fastmcp import FastMCP
 
-from .prompts import analise_candidato, comparar_candidatos, panorama_eleitoral
+from .prompts import transparencia_anuncios
 from .resources import campos_disponiveis, estados_brasileiros, parametros_busca
 from .tools import (
     analisar_demografia_anuncios,
@@ -32,6 +32,4 @@ mcp.resource("data://parametros-busca", mime_type="application/json")(parametros
 mcp.resource("data://campos-disponiveis", mime_type="application/json")(campos_disponiveis)
 
 # Prompts
-mcp.prompt(analise_candidato)
-mcp.prompt(panorama_eleitoral)
-mcp.prompt(comparar_candidatos)
+mcp.prompt(transparencia_anuncios)

@@ -22,7 +22,7 @@ def analise_candidato(
         cargo: Código do cargo.
     """
     return (
-        f"Faça uma análise completa do candidato '{nome}' "
+        f"Consulte os dados públicos do candidato '{nome}' "
         f"na eleição {ano} usando os dados do TSE.\n\n"
         "Passos:\n"
         f"1. Use listar_candidatos(ano={ano}, municipio={municipio}, "
@@ -30,16 +30,15 @@ def analise_candidato(
         "2. Com o ID do candidato, use buscar_candidato() para detalhes completos\n"
         "3. Use consultar_prestacao_contas() para ver as finanças de campanha\n\n"
         "Apresente:\n"
-        "- Dados pessoais e eleitorais\n"
-        "- Patrimônio declarado (total de bens)\n"
-        "- Receitas e despesas de campanha\n"
-        "- Principais doadores e fornecedores\n"
-        "- Situação da candidatura (apto/inapto, ficha limpa)"
+        "- Dados eleitorais: partido, número, cargo\n"
+        "- Escolaridade e ocupação declaradas\n"
+        "- Receitas e despesas de campanha declaradas ao TSE\n"
+        "- Situação da candidatura e regularidade"
     )
 
 
-def comparativo_eleicao(ano: int, municipio: int, eleicao_id: int, cargo: int) -> str:
-    """Gera um comparativo entre candidatos de uma eleição.
+def panorama_eleicao(ano: int, municipio: int, eleicao_id: int, cargo: int) -> str:
+    """Lista os candidatos registrados em uma eleição para consulta cidadã.
 
     Args:
         ano: Ano da eleição.
@@ -48,16 +47,14 @@ def comparativo_eleicao(ano: int, municipio: int, eleicao_id: int, cargo: int) -
         cargo: Código do cargo.
     """
     return (
-        f"Compare os candidatos da eleição {ano} usando os dados do TSE.\n\n"
+        f"Liste os candidatos registrados na eleição {ano} "
+        "usando os dados do TSE.\n\n"
         "Passos:\n"
         f"1. Use listar_candidatos(ano={ano}, municipio={municipio}, "
         f"eleicao_id={eleicao_id}, cargo={cargo})\n"
-        "2. Para cada candidato, use buscar_candidato() para detalhes\n"
-        "3. Para cada candidato, use consultar_prestacao_contas()\n\n"
-        "Apresente uma tabela comparativa com:\n"
+        "2. Para cada candidato, use buscar_candidato() para detalhes\n\n"
+        "Apresente uma tabela informativa com:\n"
         "- Nome, partido, número\n"
-        "- Patrimônio declarado\n"
-        "- Receitas e despesas de campanha\n"
-        "- Situação (apto/inapto)\n"
-        "- Escolaridade e ocupação"
+        "- Situação da candidatura (apto/inapto)\n"
+        "- Escolaridade e ocupação declaradas"
     )

@@ -75,8 +75,6 @@ def analise_votacao(votacao_id: str) -> str:
         "para obter todos os votos individuais\n\n"
         "Apresente:\n"
         "- Resultado geral: aprovada ou rejeitada, total de votos Sim/Não/Abstenção\n"
-        "- Análise por partido: como cada partido votou (% Sim vs Não)\n"
-        "- Análise por região: como cada UF/região votou\n"
-        "- Destaques: votos dissidentes (deputados que votaram contra o partido)\n"
-        "- Governismo vs oposição: qual foi o comportamento de cada bloco?"
+        "- Como cada partido votou (percentual Sim vs Não)\n"
+        "- Distribuição dos votos por região do país"
     )

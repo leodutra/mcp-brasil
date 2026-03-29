@@ -138,13 +138,13 @@ class TestPromptExecution:
     async def test_total_prompts(self) -> None:
         async with Client(mcp) as c:
             prompts = await c.list_prompts()
-            assert len(prompts) == 3
+            assert len(prompts) == 1
 
     @pytest.mark.asyncio
-    async def test_chamar_analise_candidato(self) -> None:
+    async def test_chamar_transparencia_anuncios(self) -> None:
         async with Client(mcp) as c:
             result = await c.get_prompt(
-                "analise_candidato",
-                arguments={"nome_candidato": "Teste"},
+                "transparencia_anuncios",
+                arguments={"termo": "Teste"},
             )
             assert len(result.messages) > 0

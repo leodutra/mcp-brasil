@@ -139,7 +139,7 @@ def investigar_cnpj_diarios(cnpj: str) -> str:
         "   - Contratos e licitações municipais\n"
         "   - Sanções e penalidades (CEIS, CNEP)\n"
         "   - Autorizações, licenças, alvarás\n"
-        "   - Nomeações de sócios em cargos públicos\n\n"
+        "\n"
         "Apresente relatório consolidado com achados por esfera (federal/municipal)."
     )
 

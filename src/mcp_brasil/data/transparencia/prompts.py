@@ -59,9 +59,9 @@ def analise_despesas(mes_ano_inicio: str, mes_ano_fim: str, uf: str = "") -> str
         "- Volume total de despesas no período\n"
         "- Principais favorecidos (top 10 por valor)\n"
         "- Distribuição por órgão\n"
-        "- Emendas parlamentares: autores e valores\n"
+        "- Emendas parlamentares executadas no período\n"
         "- Licitações abertas e concluídas no período\n"
-        "- Observações relevantes sobre concentração de recursos"
+        "- Distribuição dos recursos por área (saúde, educação, etc.)"
     )
 
 

@@ -54,8 +54,7 @@ def perfil_senador(codigo: str) -> str:
         "para verificar as votações recentes\n\n"
         "Apresente:\n"
         "- Dados do senador: nome, partido, UF, mandato\n"
-        "- Votações recentes: posicionamento em matérias relevantes\n"
-        "- Padrão de votação: alinhamento com governo/oposição"
+        "- Participação em votações recentes e posicionamentos públicos"
     )
 
 

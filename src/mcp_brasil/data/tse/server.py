@@ -5,7 +5,7 @@ This file only registers components. Zero business logic (ADR-001 rule #4).
 
 from fastmcp import FastMCP
 
-from .prompts import analise_candidato, comparativo_eleicao
+from .prompts import analise_candidato, panorama_eleicao
 from .resources import cargos_eleitorais, info_api
 from .tools import (
     anos_eleitorais,
@@ -52,4 +52,4 @@ mcp.resource("data://info-api", mime_type="application/json")(info_api)
 
 # Prompts
 mcp.prompt(analise_candidato)
-mcp.prompt(comparativo_eleicao)
+mcp.prompt(panorama_eleicao)
