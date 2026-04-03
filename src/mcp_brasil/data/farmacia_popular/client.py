@@ -25,6 +25,13 @@ from .schemas import EstatisticasPrograma, FarmaciaEstabelecimento, Medicamento
 
 def _parse_farmacia(raw: dict[str, Any]) -> FarmaciaEstabelecimento:
     """Parse a raw CNES establishment dict into a FarmaciaEstabelecimento model."""
+    endereco = raw.get("endereco_estabelecimento") or raw.get("endereco")
+    numero = raw.get("numero_estabelecimento")
+    bairro = raw.get("bairro_estabelecimento")
+    if endereco and numero:
+        endereco = f"{endereco}, {numero}"
+    if endereco and bairro:
+        endereco = f"{endereco} - {bairro}"
     return FarmaciaEstabelecimento(
         codigo_cnes=str(raw.get("codigo_cnes", "") or ""),
         nome_fantasia=raw.get("nome_fantasia"),
@@ -32,7 +39,7 @@ def _parse_farmacia(raw: dict[str, Any]) -> FarmaciaEstabelecimento:
         tipo_gestao=raw.get("tipo_gestao"),
         codigo_municipio=str(raw.get("codigo_municipio", "") or ""),
         codigo_uf=str(raw.get("codigo_uf", "") or ""),
-        endereco=raw.get("endereco"),
+        endereco=endereco,
     )
 
 
@@ -64,8 +71,14 @@ async def buscar_farmacias(
     if codigo_uf:
         params["codigo_uf"] = codigo_uf
 
-    data: list[dict[str, Any]] = await http_get(ESTABELECIMENTOS_URL, params=params)
-    return [_parse_farmacia(item) for item in data]
+    raw = await http_get(ESTABELECIMENTOS_URL, params=params)
+    if isinstance(raw, dict):
+        items = raw.get("estabelecimentos", [])
+    elif isinstance(raw, list):
+        items = raw
+    else:
+        items = []
+    return [_parse_farmacia(item) for item in items if isinstance(item, dict)]
 
 
 def _parse_medicamento(raw: dict[str, str | bool]) -> Medicamento:
