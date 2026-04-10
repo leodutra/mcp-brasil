@@ -10,6 +10,7 @@ __pycache__
 *.pyc
 tests/
 docs/
+!docs/assets/logo.png
 plan/
 scripts/
 dist/
